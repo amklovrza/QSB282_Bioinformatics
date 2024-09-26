@@ -1,0 +1,487 @@
+---
+title: "QSB 282 Fall 2024 Lab #4" 
+subtitle: "Programming Skills in the Base R Language"
+author: "Anabelle Marques Klovrza"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    number_sections: yes
+    toc: yes
+  word_document:
+    toc: yes
+editor_options:
+  chunk_output_type: inline
+params:
+  class: "QSB 282"
+  classweb: https://catcourses.ucmerced.edu/courses/32589
+  semester: "Fall Semester of 2024"
+  assignment: "Lab #4"
+  purpose: "to practice fundamental skills in programming in base R programming language"
+  deadline: "11:59 PM on Friday, Sep 20th, 2024"
+  date: !r Sys.Date()
+  version: 1
+  rmarkdown_url: ""
+  bib_url: ""
+  datafiles: ""
+  ids: !r c("jcalderon27","agallardo10","cng368","csotero","bimstepf","shour","jtello5","nkhurram","bmotomochicedillo","lbajwa","zfayaziboroujeni","shussin","eneff","kestrella6","jlucero25","mmajumdar","aklovrza","aminahdawood","nsafaeihashkavaei","fgorrostietacampos","pcuriel","jdo61","lbreithaupt")  
+  computers: !r c("Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Mac","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Windows/Linux","Windows/Linux","Windows/Linux","Mac","Mac")
+  s0p1: 4321
+  s1c1: ce234bbdc72441566df759f34a69cc3f
+  s1c2: 314205d5a0c6740f8f69bfc616f20554
+  s1c3: d76e8f465b0a4690cb177695dba5a4eb
+  s1c4: 58b75d740eb6e21a541e25d176b4a9ea
+  s1c5: 36968a72df3c260a19c0b3d562ee3f93
+  s2c1: 934c676f81e1b99ecf9dac5fbbde4576
+  s2c2: 5675c36f0334180901df68bdf3ef9087
+  s3c1: 2efba2814f16edb19c12f648efae5f5f
+  s3c2: b44a6decbbdd3f79be908d577b53a52a
+  s3c3: 96f44c5d73dad4e34fa36fc10b1eaccf
+  s3c4: c3deb6dccc544c8aa5394aaee8886a34
+  s3c5: e47b78ce4e5ea49f24620e4e34e50fe2
+  s3c6: b4225617dfaf8ac2953ceb9f1fb3aba2
+  s4c1: b964215434182e2db3105cc228d3abfa
+  s4c2: b0f31edc1dee1bf6f92d79db88638ef4
+date: "`r params$date`"
+urlcolor: blue
+linkcolor: red
+references:
+- id: whitlockAnalysis2020
+  type: book
+  author:
+  - family: Whitlock
+    given: Michael
+  - family: Schluter
+    given: Dolph
+  issued:
+  - year: 2020
+  title: The analysis of biological data
+  publisher: W. H. Freeman & Company
+  publisher-place: New York
+  edition: Third edition
+  ISBN: 1-319-22629-9
+- id: martinBirths2011
+  type: article-journal
+  author:
+  - family: Martin
+    given: Joyce A
+  - family: Hamilton
+    given: Brady E
+  - family: Ventura
+    given: Stephanie J
+  - family: Osterman
+    given: Michelle J K
+  - family: Kirmeyer
+    given: Sharon
+  - family: Mathews
+    given: T J
+  - family: Wilson
+    given: Elizabeth C
+  issued:
+  - year: 2011
+    month: 11
+  title: 'Births: Final data for 2009'
+  container-title: National vital statistics reports
+  page: 1-70
+  volume: '60'
+  issue: '1'
+  ISSN: 1551-8930
+  PMID: '22670489'
+- id: geffeneyMechanisms2002
+  type: article-journal
+  author:
+  - family: Geffeney
+    given: Shana
+  - family: Brodie
+    given: Edmund D.
+  - family: Ruben
+    given: Peter C.
+  - family: Brodie
+    given: Edmund D.
+  issued:
+  - year: 2002
+    month: 8
+  title: 'Mechanisms of adaptation in a predator-prey arms race: TTX-resistant sodium
+    channels'
+  title-short: Mechanisms of adaptation in a predator-prey arms race
+  container-title: Science (New York, N.Y.)
+  page: 1336-1339
+  volume: '297'
+  issue: '5585'
+  PMID: '12193784'
+---
+
+```{r setup, include=FALSE, cache=F, message=F, warning=F, results="hide"}
+##  PLAY THIS CODE CHUNK IN ORDER TO BE ABLE TO CHECK ANSWERS BY PLAYING CODE CHUNKS
+knitr::opts_chunk$set(echo=TRUE,cache=FALSE,warning=FALSE, message=FALSE, collapse=TRUE)
+checkdata <- list(team          = params$s1c1,
+                  tissuelabels  = params$s1c2,
+                  bases         = params$s1c3,
+                  abs_freq      = params$s1c4,
+                  penguins      = params$s1c5,
+                  penguinmedians= params$s2c1,
+                  vectorize     = params$s2c2,
+                  BentonResistance = params$s3c1,
+                  mouse_lact    = params$s3c2,
+                  mouse_lact_rn = params$s3c3,
+                  mouse_lact_filtered = params$s3c4,
+                  airquality    = params$s3c5,
+                  addmedian     = params$s3c6,
+                  sortvector    = params$s4c1,
+                  sortdf        = params$s4c2
+                  )
+print_and_check <- function(answer,q){
+  print(paste0("Answer for problem ",q))
+  print(answer)
+  check <- ifelse(digest::digest(answer) == checkdata[q], ## TEST
+                  "CORRECT", ## TRUE
+                  "INCORRECT") ## FALSE
+  print(unname(check))
+}
+check <- function(answer,q){
+  check <- ifelse(digest::digest(answer) == checkdata[q], ## TEST
+                  "CORRECT", ## TRUE
+                  "INCORRECT") ## FALSE
+  print(unname(check))
+}
+```
+
+# Preface
+
+## Purpose of this Problem Set Assignment
+
+The purpose of this Problem Set is `r params$purpose`
+
+## Instructions to Complete This Problem Set Assignment
+
+1.  Download the `.Rmd` file for this lab from Files under `r params$classweb`.
+2.  Open your copy of the file in RStudio and edit the `author:` field in the YAML header at the top of the file so that it contains your name.
+3.  Consult with your team on the problems, and work individually to find the solutions for each problem in the R console. Copy any initialization code for a specific problem to the Console and work your solutions there.
+4.  Once you believe you have solved a problem, copy your solution code to the appropriate problem code chunk, assigning your solution to the `answer` variable, by replacing the text that looks like `NA1` with yout solution code.
+5.  To check if your answers are correct or incorrect, knit your assignment file to generate HTML output. Alternatively, you may also play the `setup` code chunk above at the top of this RMarkdown document by pressing the green "play" button at its top right, and then check your answers by playing the answer code chunks in the main body of your worked assignment file.
+6.  After completing all steps assignment, turn in the knitted output HTML file to Canvas.
+
+## How to Correctly Calculate Solutions in R
+
+The R interpreter keeps more digits of precision in memory than it shows you, so to compute accurately with it you need to follow some simple practices. To preserve accuracy and precision in your R calculations:
+
+1.  Input data values with exactly the same precision as given.
+
+2.  DO NOT ROUND ANY CALCULATIONS --- INTERMEDIATE OR FINAL FOR THIS ASSIGNMENT
+
+3.  Save calculations in named variables using the assignment operator and refer to those variables by name in later calculations:
+
+    ```         
+    #example 1:
+    z <- (-0.05 - 0.037) / 0.385; #you need the parentheses so subtraction happens first
+    p <- pnorm(z)
+
+    #example 2:
+    CI <- binom.confint(19,50,conf.level = 0.99,method="agresti-coull")
+    LB <- CI$lower  
+    ```
+
+4.  Nest R functional expressions containing the values given in the problem directly:
+
+    ```         
+    #example 1:
+    pnorm((-0.05 - 0.037) / 0.385) # input the expression that evaluates to z
+
+    #example 2:
+    LB <- binom.confint(19,50,conf.level = 0.99,method="agresti-coull")$lower
+    ```
+
+## Due Date and Grading
+
+`r params$assignment` is due at `r params$deadline`
+
+# Assignment
+
+## Task 1: Find your Team
+
+Please sit with your team from last week. By knitting this notebook you can obtain a reminder about the make-up of teams:
+
+```{r}
+set.seed(282)
+lab <- data.frame(ids = params$ids,
+                  computers = params$computers)
+macusers <- lab[lab$computers=="Mac",]
+winusers <- lab[lab$computers=="Windows/Linux",]
+winusers$team <- sample(c(rep("Team 1",6),rep("Team 2",5)),11,replace=FALSE)
+macusers$team <- sample(c(rep("Team 3",6),rep("Team 4",6)),12,replace=FALSE)
+teams <- c("Team 1"="Triangle PiRates",
+           "Team 2"="Team Org",
+           "Team 3"="Genome Guardians",
+           "Team 4"="Lab (R)ats")
+winusers$teamname <- teams[winusers$team]
+macusers$teamname <- teams[macusers$team]
+winusers
+macusers
+answer <- c(macusers$team,winusers$team)
+check(answer,"team")
+set.seed(params$s0p1)
+```
+
+## Generate and Summarize Vectors
+
+### Generate Labels for an Experimental Design
+
+Suppose that in an RNA-Seq experiment, three tissues were sampled --- brain, liver and spleen --- from three subjects, named tom, jerry and olive.
+
+Check the documentation of the `outer` and `paste` functions to write code that computes an array of labels for each sample combining the subject and tissue name labels separated by hyphens ordered by tissue (for example beginning with `tom-brain`, `jerry-brain`,... `olive-spleen`) from the initialized character vectors `subjects` and `tissues` below.
+
+Hint: You will need to set the optional argument `sep` and pass it to `paste` from your call to the `outer` function.
+
+Save the return value, which is an array, to the variable called `answer` by replacing 'NA" with your code.
+
+Do not edit the line `dim(answer) <- NULL,` which converts the array named `answer` to a character vector.
+
+```{r}
+subjects <- c("tom","jerry","olive")
+tissues  <- c("brain","liver","spleen")
+answer <- outer(subjects, tissues, FUN = paste, sep = "-")
+dim(answer) <- NULL ## Do not edit: this changes the array to a vector  
+print_and_check(answer,"tissuelabels")
+```
+
+### Simulate Random Samples With Replacement
+
+Suppose that some DNA has the average composition (`pA == pT == 0.4` and `pG == pC == 0.1`).
+
+Use the function `sample` with optional arguments `replace=TRUE` and `prob` to simulate a random character vector of DNA bases of length 100 with this composition.
+
+```{r}
+bases <- c('A','T','C','G')
+answer <- sample(bases, 100, replace = TRUE, prob = c(0.4, 0.4, 0.1, 0.1))
+print_and_check(answer,"bases")
+DNA <- answer ## don't change this line, you'll need it for the next problem
+```
+
+### Count Absolute Frequencies of Words in a Character Vector
+
+In Lecture 4 slides, I demonstrated a functional programming technique using `sapply` to count the numbers of individuals from each of three species of iris in the built-in `iris` dataset. This technique is very general, but for counting frequencies of occurrence of events, the simple function `table` will do. Use the function `table` to count absolute frequencies of each base of DNA from the sample you simulated in the last question, saved in the character vector `DNA`.
+
+```{r}
+answer <- table(DNA)
+print_and_check(answer,"abs_freq")
+table <- answer ## don't change this line, you'll need it for the next problem
+```
+
+### Compute Relative Frequencies from a Vector of Absolute Frequencies
+
+Use the functions `table` and `sum` to compute the relative frequencies of each species of penguin in the `penguins` dataset from the `palmerpenguins` package.
+
+```{r}
+library(palmerpenguins)
+penguinspecies <- table(penguins$species)
+answer <- penguinspecies / sum(penguinspecies)
+print_and_check(answer,"penguins")
+```
+
+
+## Summarize Lists
+### Summarize a Corresponding Component of Each Element of a List
+
+The R function `split` can split a data-frame into a list of data-frames for each level of a factor.
+
+Copy `peng_list = split(penguins, f = penguins$species);peng_list` into the Console to verify that it has split the `penguins` data-frame into a list of data-frames for each species.
+
+Now use the function `lapply` with an anonymous function to compute the `median` of `flipper_length_mm` for each species. Take care to use the optional argument `na.rm = TRUE` to compute the median for species with missing data.
+
+```{r}
+peng_list = split(penguins, f = penguins$species)
+answer <- lapply(peng_list, function(x) median(x$flipper_length_mm, na.rm = TRUE))
+print_and_check(answer,"penguinmedians")
+flippermedians <- answer ## don't change this line, you'll need it for the next problem 
+```
+
+### Convert a List of Values Into a Vector
+
+Find and apply the correct R function to convert the list `flippermedians` from the last problem into a numeric vector.
+
+```{r}
+answer <- unlist(flippermedians)
+print_and_check(answer,"vectorize")
+```
+
+## Select Rows and Columns of Data-Frames
+
+### Filter Rows by Column Values
+
+#### Credit {.unlisted .unnumbered}
+
+This problem is modified from Chapter 13, Practice Problem 8 of @whitlockAnalysis2020. The data are from @geffeneyMechanisms2002.
+
+#### Problem Statement
+
+The skin of the rough-skinned newt *Taricha granulosa* stores a very poisonous neurotoxin called tetrodotoxin (TTX). In some areas, garter snakes that predate heavily on these newts have evolved resistance to TTX. @geffeneyMechanisms2002 compared resistance of garter snakes to TTX in two Oregon Locations called Benton and Warrenton. They measured resistance as the injected dose of TTX in Mass-Adjusted Mouse Units (MAMUs) that cause a 50% reduction in the crawl speed of snakes. Their data for 12 snakes is shown here:
+
+```{r}
+snakes <- data.frame(Location=c(rep("Benton",7),rep("Warrenton",5)),Resistance=c(0.29,0.77,0.96,0.64,0.70,0.99,0.34,0.17,0.28,0.20,0.20,0.37))
+snakes 
+```
+
+Use data-frame selection syntax with square brackets and the `summary` function in R to compute summary statistics for `Resistance` in snakes from Benton.
+
+```{r}
+answer <- summary(snakes[1:7, 2])
+print_and_check(answer,"BentonResistance")
+```
+
+### Selecting Rows With Minimal Count Values 
+
+#### Credit {.unlisted .unnumbered}
+
+Mouse lactaction data (small example counts table "small_counts.txt") from the Broad Institute's MSigDB taken from [FigShare](https://figshare.com/s/1d788fd384d33e913a2a) on Sep 16, 2024. Original source:
+
+Fu NY, Rios AC, Pal B, Soetanto R et al. EGF-mediated induction of Mcl-1 at the switch to lactation is essential for alveolar cell survival. Nat Cell Biol 2015 Apr;17(4):365-75. PMID: 25730472
+
+[GEO accession ID GSE60450](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE60450)
+
+Referred from ["RNAseq analysis in R" Workshop](https://bioinformatics-core-shared-training.github.io/RNAseq-R/). 
+
+#### Problem Statement
+
+A common issue with omics datasets is **drop-out:** when certain biomoleculaes or metabolites are not present (or more generally detectable above some threshold) in all replicates. Even with more highly consistent RNA-Seq data involving high depth of sequencing, certain low-abundance transcripts may appear with outlyingly low values across all replicates. In other circumstances, one may want to retain rows where at least two or some subset of replicates obtain a minimum value. So it can be useful to filter rows where the values of all or some columns exceed a minimum value. 
+
+#### Read Data-Frame from Tab-Delimited (More Generally White-Space-Delimited) File or Quoted Text 
+
+For this exercise, we'll work with a small sample of real RNA-Seq data, slightly modified from a small example counts data obtained from the larger mouse lactation mammary dataset referenced above.
+
+Execute the following code-chunk by pressing the green "play" button in its upper right corner. The code should run in the Console.
+
+```{r}
+mouse_lact <- read.table(text = "
+Gene Sample_1	Sample_2	Sample_3	Sample_4
+Xkr4	438	300	65	237
+Sox17	106	182	82	105
+Mrpl15	309	234	337	300
+Lypla1	652	515	948	935
+Tcea1	1604	1495	1721	1317
+Rgs20	4	2	14	4
+Atp6v1h	769	752	1062	987
+Rb1cc1	1494	1412	1157	967
+Pcmtd1	1344	1242	1374	1593
+Rrs1	1691	1808	2127	1653
+", header = TRUE)
+```
+
+Then, after it runs, inspect the printed value of this newly created data-frame `mouse_lact` in the Console by evaluating its name. 
+
+Can you see and describe to your teammates what is wrong with the data-frame? *The names of the columns are showed as factors, not just the title of them.*
+
+To fix the data-frame, you may either:
+
+1. delete "Gene" in the first header row, so that when `read.table` runs its result contains one fewer column from than all other rows, which causes `read.table` to assign the first column gene-names as **row names** of its output, which are accessible with the R function `rownames` and the column names to be taken from the first header row (accessible from the output using the R function `names` or `colnames`), or 
+
+2. modify the call to `read.table` with an optional argument to change the processing of the first header row of the data to assign it as the column names (consult `help(read.table)` or the lecture slides to find out how to do this). 
+
+Consult those sources and choose the latter option 2 to fix the call to `read.table` above so thet its uses the first header row as the column names of the output for this data-frame.
+
+```{r}
+# Do not modify this code chunk, it checks your work in the 
+# previous code chunk
+answer <- mouse_lact
+print_and_check(answer,"mouse_lact")
+```
+
+#### Set Row Names of a Data Frame
+
+Identify and apply an R function to set the `rownames` of the `mouse_lact` data-frame to be the same as the values in the `mouse_lact$Gene` column.
+
+```{r}
+## Write your answer below this line
+rownames(mouse_lact) <- mouse_lact$Gene
+rownames(mouse_lact)
+
+## do not modify the following lines
+answer <- mouse_lact
+print_and_check(answer,"mouse_lact_rn")
+```
+
+#### Filter Low Abundance Transcripts
+
+Write code to filter out all rows in which at least one replicate has a count less than 100 by writing code that combines:
+
+1. comparison of values in the data-frame to a constant, 
+2. use of `apply` with either the `all` or `any` functions to make a logical vector with an element for every row, and 
+3. use of data-frame selection syntax.
+
+Save the return value to `answer` in the following code chunk. 
+
+```{r}
+answer <- mouse_lact[apply(mouse_lact[,-1] >= 100, 1, all), ]
+print_and_check(answer,"mouse_lact_filtered")
+mouse_lact_filtered <- answer
+```
+
+## Summarize Rows and Columns of Data-Frames
+
+### Summarize Columns That Include Missing Data
+
+The built-in `airquality` dataset contains some missing data in some columns. Check it out by evaluating its name in the Console.
+
+Now in the Console, use the `summary` function in the Console to see a multistatistical summary of each column of the `airquality` dataset, including which columns have missing data. 
+
+Finally, working in the Console, use the `apply` function with the `median` function as the functional argument, and provide an additional optional argument to the median function in a fourth argument to `apply` so that actual median values are compared for all six columns. The results should be identical within rounding to the output you previously obtained using `summary`.
+
+```{r}
+answer <- apply(airquality, 2, median, na.rm = TRUE)
+print_and_check(answer,"airquality")
+```
+
+### Add a New Column Summarizing Rows to a Data-Frame
+
+To the `mouse_lact_filtered` data-frame generated two problems ago, use assignment to add a new column `Median` that contains the median of counts across the four samples for all rows remaining and unfiltered.
+
+```{r}
+## write your answer in the line below
+mouse_lact_filtered$Median <- apply(mouse_lact_filtered, 1, median)
+## don't change the following code 
+answer <- mouse_lact_filtered
+print_and_check(answer,"addmedian")
+```
+
+
+## Sort Vectors and Data-Frames by Values Contingent with One Column
+
+### Sort a Numeric Vector 
+
+In the Console, compare the return values of `sort(iris$Sepal.Length)` and `order(iris$Sepal.Length)`. 
+
+Now, practicing in the Console, use vector selection syntax together with the return value of `order(iris$Sepal.Length)` to obtain the same output as returned by `sort(iris$Sepal.Length)`.
+
+Finally, in the code chunk, write your solution R code that sorts `iris$Sepal.Length` using the `order` function as a string value and assign it to the variable `quoteanswer`. 
+
+```{r}
+quoteanswer <- "iris$Sepal.Length[order(iris$Sepal.Length)]"
+
+## do not change code below this line
+answer <- eval(parse(text=quoteanswer))
+answer
+print_and_check(quoteanswer,"sortvector")
+```
+
+### Sort Rows of a Data-Frame by Values in One Column 
+
+In the Console, use the `order` function together with data-frame selection syntax to sort the rows of the `mouse_lact_filtered` data-frame by the values of its `Median` column.
+
+Finally, in the code chunk, assign the row-sorted data-frame to the variable `answer`. 
+
+```{r}
+answer <- mouse_lact_filtered[order(mouse_lact_filtered$Median), ]
+print_and_check(answer,"sortdf")
+```
+
+## Congratulations! 
+
+You are now done with Lab 4.
+
+## Please Share Your Feedback and/or Questions about this Lab
+
+I think that this lab was the one that I have learnt the most! 
+
+# References
