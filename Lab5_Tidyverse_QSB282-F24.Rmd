@@ -1,0 +1,229 @@
+---
+title: "QSB 282 Fall 2024 Lab #5" 
+subtitle: "TidyVerse Pipelines, Tidy Data, and Regular Expressions"
+author: "Anabelle Marques Klovrza"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    number_sections: yes
+    toc: yes
+  word_document:
+    toc: yes
+editor_options:
+  chunk_output_type: inline
+params:
+  class: "QSB 282"
+  classweb: https://catcourses.ucmerced.edu/courses/32589
+  semester: "Fall Semester of 2024"
+  assignment: "Lab #5"
+  purpose: "to practice fundamental skills in programming data science pipelines in R/TidyVerse including Regular Expressions"
+  deadline: "11:59 PM on Friday, Sep 27th, 2024"
+  date: !r Sys.Date()
+  version: 1
+  rmarkdown_url: ""
+  bib_url: ""
+  datafiles: ""
+  ids: !r c("jcalderon27","agallardo10","cng368","csotero","bimstepf","shour","jtello5","nkhurram","bmotomochicedillo","lbajwa","zfayaziboroujeni","shussin","eneff","kestrella6","jlucero25","mmajumdar","aklovrza","aminahdawood","nsafaeihashkavaei","fgorrostietacampos","pcuriel","jdo61","lbreithaupt","lawrencecheung","bbarana")  
+  computers: !r c("Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Mac","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Windows/Linux","Windows/Linux","Windows/Linux","Mac","Mac","Windows","Windows")
+  s0p1: 4321
+  s1c1: 83154d804d8eb384bedc11a4012c1fe5
+  s1c2: 41dee5bb07fe9fae50a2138a6cf82159
+date: "`r params$date`"
+urlcolor: blue
+linkcolor: red
+---
+
+```{r setup, include=FALSE, cache=F, message=F, warning=F, results="hide"}
+##  PLAY THIS CODE CHUNK IN ORDER TO BE ABLE TO CHECK ANSWERS BY PLAYING CODE CHUNKS
+knitr::opts_chunk$set(echo=TRUE,cache=FALSE,warning=FALSE, message=FALSE, collapse=TRUE)
+checkdata <- list(penguins_bill = params$s1c1,
+                  penguins_multivar = params$s1c2
+                  )
+print_and_check <- function(answer,q){
+  print(paste0("Answer for problem ",q))
+  print(answer)
+  check <- ifelse(digest::digest(answer) == checkdata[q], ## TEST
+                  "CORRECT", ## TRUE
+                  "INCORRECT") ## FALSE
+  print(unname(check))
+}
+check <- function(answer,q){
+  check <- ifelse(digest::digest(answer) == checkdata[q], ## TEST
+                  "CORRECT", ## TRUE
+                  "INCORRECT") ## FALSE
+  print(unname(check))
+}
+```
+
+# Preface
+
+## Purpose of this Problem Set Assignment
+
+The purpose of this Problem Set is `r params$purpose`
+
+## Instructions to Complete This Problem Set Assignment
+
+1.  Download the `.Rmd` file for this lab from Files under `r params$classweb`.
+2.  Open your copy of the file in RStudio and edit the `author:` field in the YAML header at the top of the file so that it contains your name.
+3.  Consult with your team on the problems, and work individually to find the solutions for each problem in the R console. Copy any initialization code for a specific problem to the Console and work your solutions there.
+4.  Once you believe you have solved a problem, copy your solution code to the appropriate problem code chunk, assigning your solution to the `answer` variable, by replacing the text that looks like `NA1` with your solution code.
+5.  To check if your answers are correct or incorrect, knit your assignment file to generate HTML output. Alternatively, you may also play the `setup` code chunk above at the top of this RMarkdown document by pressing the green "play" button at its top right, and then check your answers by playing the answer code chunks in the main body of your worked assignment file.
+6.  After completing all steps assignment, turn in the knitted output HTML file to Canvas.
+
+## How to Correctly Calculate Solutions in R
+
+The R interpreter keeps more digits of precision in memory than it shows you, so to compute accurately with it you need to follow some simple practices. To preserve accuracy and precision in your R calculations:
+
+1.  Input data values with exactly the same precision as given.
+
+2.  DO NOT ROUND ANY CALCULATIONS --- INTERMEDIATE OR FINAL FOR THIS ASSIGNMENT
+
+3.  Save calculations in named variables using the assignment operator and refer to those variables by name in later calculations:
+
+    ```         
+    #example 1:
+    z <- (-0.05 - 0.037) / 0.385; #you need the parentheses so subtraction happens first
+    p <- pnorm(z)
+
+    #example 2:
+    CI <- binom.confint(19,50,conf.level = 0.99,method="agresti-coull")
+    LB <- CI$lower  
+    ```
+
+4.  Nest R functional expressions containing the values given in the problem directly:
+
+    ```         
+    #example 1:
+    pnorm((-0.05 - 0.037) / 0.385) # input the expression that evaluates to z
+
+    #example 2:
+    LB <- binom.confint(19,50,conf.level = 0.99,method="agresti-coull")$lower
+    ```
+
+## Due Date and Grading
+
+`r params$assignment` is due at `r params$deadline`
+
+# Assignment
+
+## Task 1: Find your Team
+
+Please sit with your team from last week. By knitting this notebook you can obtain a reminder about the make-up of teams:
+
+```{r}
+set.seed(params$s0p1)
+lab <- data.frame(ids = params$ids,
+                  computers = params$computers)
+lab$team <- sample(c(rep("Team 1",5),rep("Team 2",5),rep("Team 3",5),rep("Team 4",5),rep("Team 5",5) ),25,replace=FALSE)
+lab[order(lab$team),]
+
+```
+## Loading Libraries but not Installing Packages in Notebooks
+
+(Note: I use "library" and "package" interchangeably; technically they have slightly different meanings, but the difference is unimportant)
+
+When you knit an RMarkdown notebook, RStudio spawns a "fresh" R interpreter with an empty environment and no user-installed libraries loaded into memory. 
+
+This freshly-spawned "knitting" R interpreter runs all of the RMarkdown notebook's code chunks in order from top to bottom. Therefore code chunks need to load libraries before they are used. 
+
+Often notebook authors will collect the names of all of the libraries that they use in a notebook and load them all in a single code chunk near the top of the document. This helps make clear what libraries a collaborator using your notebook will need to install before they can knit your notebook. 
+
+In order to load a library and attach its package to a running R interpreter's namespace, you need to install that package on your laptop first. 
+
+**Discuss with your teammates and then briefly write an explanation after the right angle bracket (`>`): Why should you only install packages in the Console, and not in a code chunk on your notebook?** 
+
+> I believe that it is because if other people see your code, maybe they already have the packages installed, so you do not need to put the install packages in the chunks.
+
+**In the following code chunk, load the `tidyverse`, `palmerpenguins` and `babynames` libraries so that you can use them in subsequent code chunks for this lab:**
+
+```{r}
+library(tidyverse)
+library(palmerpenguins)
+library(babynames)
+```
+
+## Use R/TidyVerse Pipelines to Analyze Palmer Penguins [Chap. 3 "Data Transformation" in R4DS, 2e](https://r4ds.hadley.nz/data-transform)
+
+### Summarize One Variable for Groups in a Tibble
+
+In a previous lab, we used base-R `split()` and `lapply()` functions to calculate summaries for different species of `iris`. Let's explore how to do similar tasks with R/TidyVerse.
+
+Use the base-R pipe `|>` to build a TidyVerse pipeline that uses `group_by` to group penguins by species, and `summarize(count=n(), mean_bill_length_mm = mean())` to compute the number of each species of penguin and the mean bill length of each species. Take care to set the `na.rm =` parameter to the `mean()` function to compute the means even though the data contains `NA` missing data. Save the result to `answer`. 
+
+```{r}
+answer <- penguins |>
+     group_by(species) |>
+     summarise(count=n(), mean_bill_length_mm = mean(bill_length_mm, na.rm = TRUE))
+print_and_check(answer,"penguins_bill")
+```
+
+### Summarize Multiple Variables for Multiple Groups in a Tibble.
+
+Use the base-R pipe `|>` to build a TidyVerse pipeline that first drops all rows of `penguins` with any `NA` missing values by filtering through the `drop_na()` function, then uses `group_by` to group penguins by BOTH species AND sex, and then uses `summarize_at()` with `vars(bill_length_mm:body_mass_g)` to compute the `median` of each of four traits for each species and sex of penguin. Because you remove rows with any `NA` in the first step, you don't need to take care to set the `na.rm =` parameter to the `median()` function.
+
+```{r}
+answer <- penguins |> 
+     drop_na() |>
+     group_by(species, sex) |>
+     summarize_at(vars(bill_length_mm:body_mass_g), median)
+print_and_check(answer,"penguins_multivar")
+```
+
+
+## Import Untidy Babynames Data from the `names2000s.txt` File and Make it Tidy [Chap. 5 "Data Tidying" in R4DS, 2e](https://r4ds.hadley.nz/data-tidy)
+
+It's especially useful to know how to make data "tidy" in the TidyVerse sense  because it allows you to multiplot more than one data series at a time when visualizing data with `ggplot2`.  
+
+1. In the UNIX shell, using the babynames data from the 2000s that you downloaded from the SSA, first extract only the data-lines using the UNIX command `egrep` and the regular expression `^\s+\d` (which matches the beginning of the line, one or more space characters followed by a digit), delete commas, and save the output to a new file by running the command
+
+```
+egrep '^\s+\d' names2000s.txt | tr -d , > names2000s_data.txt
+```
+
+2. Now read the data into R as a tibble by using the Tidyverse `read_table` function by "playing" the following code chunk (press the green "play" button in the upper right corner):
+
+```{r}
+read_table("names2000s_data.txt",col_names = F) |> select(1:5) -> names2k
+names(names2k) <- c("rank","boy_name","boy_number","girl_name","girl_number")
+head(names2k)
+```
+
+3. Discuss with your teammates: why is this data not tidy? Which variable is being re-used for two distinct units of observation? Answer here:
+
+> The rank column is doubled, because in `names2k_tidy`, we have the rank doubled for boys and girls.
+
+4. The following code makes this data tidy. Run the code-chunk to execute it in the Console.
+
+```{r}
+names2k |> pivot_longer(cols = boy_name:girl_number, names_to = c("sex", ".value"),names_sep = "_") -> names2k_tidy
+```
+
+5. In the Console, use the `count()` function to check that the count of rows of the new tidy data-frame is correct. If the original data had 200 rows of data, how many rows should it contain? Answer below.
+
+> 400  
+
+## Use TidyVerse with Regular Expressions to Analyze R Baby Names Data [Chap. 15 "Regular Expressions" in R4DS, 2e](https://r4ds.hadley.nz/regexps)
+
+### Filtering Rows by Regular Expression Matches on a Column
+
+Using the already-tidy `babynames` dataframe from the `babynames` library, use `filter` in combination with `str_detect` to match names in the `name` column that start with a vowel followed by at least two more vowels. If you then pass the output through `select(name) |> distinct() |> arrange(name)` and then `count()` them or print them all with `print(n=Inf)` -- you should see and obtain 73 names.
+
+```{r}
+babynames |>
+     filter(str_detect(name, "[AEIOU][aeiou][aeiou]+")) |>
+     select(name) |> distinct() |> arrange(name) |> count(name)
+```
+
+
+## Congratulations! 
+
+You are now done with Lab 5.
+
+## Please Share Your Feedback and/or Questions about this Lab
+
+[Do you have any feedback or questions after completing this assignment? Please write those here.]{style="color:blue"}
+
