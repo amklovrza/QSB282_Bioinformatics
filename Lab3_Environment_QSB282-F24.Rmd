@@ -1,0 +1,682 @@
+---
+title: "QSB 282 Fall 2024 Lab #3" 
+subtitle: "Understanding the Roles of Environments in the UNIX Shell and R/RStudio"
+author: "Anabelle Marques Klovrza"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    number_sections: yes
+    toc: yes
+  word_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+params:
+  class: "QSB 282"
+  classweb: https://catcourses.ucmerced.edu/courses/32589
+  semester: "Fall Semester of 2024"
+  assignment: "Lab #3"
+  purpose: "to understand the common concept of \"Environment\" as it applies to UNIX and R: working with shell variables, particularly the command-line PATH shell variable, and how environments work to give meaning to names of data and functions in R/RStudio"
+  deadline: "1:00 PM on Wednesday, Sep 11th, 2024"
+  date: !r Sys.Date()
+  version: 1
+  rmarkdown_url: ""
+  bib_url: ""
+  datafiles: ""
+  ids: !r c("jcalderon27","agallardo10","cng368","csotero","bimstepf","shour","jtello5","nkhurram","bmotomochicedillo","lbajwa","zfayaziboroujeni","shussin","eneff","kestrella6","jlucero25","mmajumdar","aklovrza","aminahdawood","nsafaeihashkavaei","fgorrostietacampos","pcuriel","jdo61","lbreithaupt")  
+  computers: !r c("Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Mac","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Windows/Linux","Windows/Linux","Windows/Linux","Mac","Mac")
+  s1c1: ce234bbdc72441566df759f34a69cc3f
+date: "`r params$date`"
+urlcolor: blue
+linkcolor: red
+---
+
+```{r setup, include=FALSE, cache=F, message=F, warning=F, results="hide"}
+##  PLAY THIS CODE CHUNK IN ORDER TO BE ABLE TO CHECK ANSWERS BY PLAYING CODE CHUNKS
+knitr::opts_chunk$set(echo=TRUE,cache=FALSE,warning=FALSE, message=FALSE, collapse=TRUE)
+q <- 1 ## initialize question counter
+checkdata <- c(params$s1c1)
+print_and_check <- function(answer,q){
+  print(paste0("Answer for Question ",q,": ",answer))
+  check <- ifelse(digest::digest(paste(answer)) == checkdata[q], ## TEST
+                  "CORRECT", ## TRUE
+                  "INCORRECT") ## FALSE
+  print(check)
+}
+check <- function(answer,q){
+  check <- ifelse(digest::digest(answer) == checkdata[q], ## TEST
+                  "CORRECT", ## TRUE
+                  "INCORRECT") ## FALSE
+  print(check)
+}
+```
+
+# Preface
+
+## Purpose of this Problem Set Assignment
+
+The purpose of this Problem Set is `r params$purpose`
+
+## Instructions to Complete This Problem Set Assignment
+
+1.  Download the `.Rmd` file for this lab from Files under `r params$classweb`.
+2.  Open your copy of the file in RStudio and edit the `author:` field in the YAML header at the top of the file so that it contains your name.
+3.  Knit the file to see your assignment.
+4.  Read through this file in RStudio and edit the RMarkdown as instructed. 
+5.  After completing all steps assignment, turn in the knitted output HTML file to Canvas.
+
+## Due Date and Grading
+
+`r params$assignment` is due at `r params$deadline`
+
+# Assignment
+
+## Task 1: Find your Team Again
+
+Please sit with your team from last week. By knitting this notebook you can obtain a reminder about the make-up of teams:
+
+```{r}
+set.seed(282)
+lab <- data.frame(ids = params$ids,
+                  computers = params$computers)
+macusers <- lab[lab$computers=="Mac",]
+winusers <- lab[lab$computers=="Windows/Linux",]
+winusers$team <- sample(c(rep("Team 1",6),rep("Team 2",5)),11,replace=FALSE)
+macusers$team <- sample(c(rep("Team 3",6),rep("Team 4",6)),12,replace=FALSE)
+teams <- c("Team 1"="Triangle PiRates",
+           "Team 2"="Team Org",
+           "Team 3"="Genome Guardians",
+           "Team 4"="Lab (R)ats")
+winusers$teamname <- teams[winusers$team]
+macusers$teamname <- teams[macusers$team]
+winusers
+macusers
+answer <- c(macusers$team,winusers$team)
+check(answer,1)
+```
+
+## Task 2: Understand the Role of the Environment in UNIX and How to Work with Shell Variables
+
+### Background 
+
+All interpreters, including the UNIX Shell **Bash** and its many descendants, and the R interpreter, perform symbolic expansions and variable substitutions on command or input expressions, and otherwise computationally process the user input commands or expressions that they evaluate. 
+
+The UNIX shell is configurable through system- and user-specific **shell variables** (AKA **shell parameters** or **environment variables**) that may be set through system-level and user-level **configuration files**  that partly depend on its ability to **dereference** named variables into their values during run-time, and to consistently map program names onto specific executable files (like binaries or scripts) on a filesystem.
+
+The ability to consistently associate names --- arbitrary symbols --- with specific meanings and dereference them into their meanings --- R variable names to values, or function names to encoded definitions, or program names to compiled and executable files in a filesystem, is a kind of Random Access Memory (RAM) that we shall see is essential to Turing completeness -- the ability of a computer to compute like a Turing Machine at the top of the Chomsky hierarchy. 
+
+For both the UNIX Shell and the R interpreter, this facility of name-lookup depends on a resource called an **environment.**  The UNIX Shell uses an environment to assign meaning to variables such as the `PATH` shell variable, which defines where on your filesystem it looks for programs and in which order identically named programs take precedence for execution. Although you do not ordinarily need to use, know, configure or work with many different UNIX shell variables in day-to-day work in UNIX, knowing about them becomes important in configuring newly installed software and debugging unexpected behavior by the UNIX shell. 
+
+You can learn more about UNIX Shell expansions in the [Bash Reference Manual](https://www.gnu.org/software/bash/manual/) (version 5.2, published 19 September 2022, as accessed in September 2024) and other UNIX resources listed in the Course Syllabus.
+
+### Instructions
+
+1. <span style="color:blue">print-out names and values shell variables (or parameters) in your shell</span> Open a UNIX terminal and print out shell variable names and values with the UNIX command `env`. A possibly long list of variables should be printed to screen, one variable on each line In the output of `env`, the names of the shell variables are typically in ALL-CAPS and separated from their values with an equals sign (`=`), as in `NAME=value`. Record one line of this output, including the name and value here on a new line between the triple back-tick lines `` ``` ``:
+
+```
+USER=anbll
+```
+2. <span style="color:blue">Print the values of individual UNIX shell variables.</span> The UNIX command `echo` allows you to see the values of shell expansions. Enter the following UNIX commands using `echo` on your system in the UNIX shell and record the outputs after each command in between the following triple backticks `` ``` ``:
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo HOME
+```
+```
+HOME
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo $HOME
+```
+```
+/home/anbll
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo $HOST
+```
+```
+anbll
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo $SHELL
+```
+```
+/bin/bash
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo $USER
+```
+```
+anbll
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo PATH
+```
+```
+PATH
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo $PATH
+```
+```
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/windows/system32:/mnt/c/windows:/mnt/c/windows/System32/Wbem:/mnt/c/windows/System32/WindowsPowerShell/v1.0/:/mnt/c/windows/System32/OpenSSH/:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA NvDLISR:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/rig:/mnt/c/Program Files/R/bin:/mnt/c/Users/anabe/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/anabe/AppData/Local/Box/Box Edit/:/snap/bin
+```
+
+3. Discuss with your teammates and then write a single line of text after the right angle bracket `>` to explain in your own words what the `$` operator does in the above examples.
+
+> The '$' operator shows the whole path to the item that comes right after it.
+
+## Task 3: Understand and Modify the `PATH` UNIX Shell variable
+
+### Background 
+
+The value of the `PATH` shell variable determines where on your system the shell will search for an executable binary or script matching the name of a UNIX command that you execute (This command-name is always the first **word** of the UNIX command-line delimited by a block of one-or-more **"whitespace" characters**). 
+
+The value of the PATH shell variable also determines the **precedence** for execution when identically-named executables occur in more than one location on your PATH (and even when the content and behavior of those executables is not identical). The multiple locations for this search are a **list** of **absolute or relative paths** on the filesystem **delimited** by the colon character (`:`). This list of places on your filesystem are searched from left to right for executables. The first file found whose name matches the command-name  among locations searched in your PATH takes precedence for execution. This is the one returned by the UNIX command `which`. 
+
+To demonstrate all this, we'll show how to modify your PATH to include your present working directory (which is handy to run scripts inside your present working directory without prefixing the script-name with the pesky `./` string, as demonstrated earlier this week with the compiled C-language binary you created called `hello`), but also show that this putting the present working directory at the beginning of the PATH can lead to an unintended and unpleasant side-effect of **masking** an installed system-level program installed on your system. As a result, many users opt to put `.` at the end of their PATH, with lowest precedence, at least until they know to avoid giving their scripts names that collide with system-level programs. 
+
+### Instructions
+
+1. <span style="color:blue">Record the value of your PATH variable here again as the output of the following UNIX command in between the triple backticks `` ``` ``:</span> 
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo $PATH
+```
+```
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/windows/system32:/mnt/c/windows:/mnt/c/windows/System32/Wbem:/mnt/c/windows/System32/WindowsPowerShell/v1.0/:/mnt/c/windows/System32/OpenSSH/:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA NvDLISR:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/rig:/mnt/c/Program Files/R/bin:/mnt/c/Users/anabe/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/anabe/AppData/Local/Box/Box Edit/:/snap/bin
+```
+
+2. <span style="color:blue">Modify the PATH variable.</span>Enter the following two UNIX commands in the shell in order to (temporarily) add the present working directory to your PATH with highest precedence and show its effect on the PATH variable. Record the output in between the triple backticks `` ``` ``:
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+export PATH=".:$PATH" 
+echo $PATH
+```
+
+```
+.:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/windows/system32:/mnt/c/windows:/mnt/c/windows/System32/Wbem:/mnt/c/windows/System32/WindowsPowerShell/v1.0/:/mnt/c/windows/System32/OpenSSH/:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA NvDLISR:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/rig:/mnt/c/Program Files/R/bin:/mnt/c/Users/anabe/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/anabe/AppData/Local/Box/Box Edit/:/snap/bin
+```
+
+Do you see the change from the previous outputted value of PATH? 
+
+> There is a change from the path value to the present directory '.'. This means that the program is using the present directory to be executed.
+
+Notice that in the `export` command that both the shell variable name `PATH` and its existing value `$PATH` are used to rewrite the value of the PATH variable in terms of its existing value.
+
+3. <span style="color:blue">See the masking effect of PATH precedence and fix the problem.</span> Recall from lecture what `gcc` is and does. We'll make a copy into the home directory (which breaks it so it can't run as expected) and see what happens when we try to run it. Execute the following commands, record the output on your system, and see and discuss the output with your teammates, and explain in your own words what happened:
+
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+cd;which gcc
+```
+```
+/usr/bin/gcc
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+gcc
+```
+```
+gcc: fatal error: no input files
+compilation terminated.
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo "cp `which gcc` ."
+```
+```
+cp /usr/bin/gcc .
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+cp `which gcc` .
+gcc
+```
+
+```
+gcc: fatal error: no input files
+compilation terminated.
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+which gcc
+```
+```
+./gcc
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+rm gcc
+which gcc
+```
+```
+/usr/bin/gcc
+```
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+gcc
+```
+```
+gcc: fatal error: no input files
+compilation terminated.
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+touch gcc
+which gcc
+```
+```
+/usr/bin/gcc
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+ls -lrt
+gcc
+```
+```
+total 192040
+-rw-r--r-- 1 anbll anbll 196639864 Jun 10 07:42 rstudio-2024.04.2-764-amd64.deb
+drwxrwxr-x 3 anbll anbll      4096 Sep  4 11:11 R
+drwxr-xr-x 3 anbll anbll      4096 Sep  4 12:46 fall2024
+-rw-r--r-- 1 anbll anbll         0 Sep 11 11:23 gcc
+anbll@anbll:~$ gcc
+gcc: fatal error: no input files
+compilation terminated.
+
+anbll@anbll:~$ chmod a+x gcc
+anbll@anbll:~$ ls -lrt
+total 192040
+-rw-r--r-- 1 anbll anbll 196639864 Jun 10 07:42 rstudio-2024.04.2-764-amd64.deb
+drwxrwxr-x 3 anbll anbll      4096 Sep  4 11:11 R
+drwxr-xr-x 3 anbll anbll      4096 Sep  4 12:46 fall2024
+-rwxr-xr-x 1 anbll anbll         0 Sep 11 11:23 gcc
+anbll@anbll:~$ gcc
+
+After I did this, nothing happened.
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+rm gcc
+which gcc
+```
+```
+/usr/bin/gcc
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+gcc
+```
+```
+gcc: fatal error: no input files
+compilation terminated.
+```
+
+Discuss with your team-mates this sequence of commands and their output and explain on one text-line after the following right angle bracket `>` what took place during this sequence of commands.
+
+> The error that we got when we copied the file 'gcc' to the home directory means that the local copy does not execute the same way as the system copy.
+
+4. <span style="color:blue">Explore a little more about shell expansion and hidden configuration dot-files.</span> When you use the command `export` to modify the value of a shell variable at the command-prompt, it only modifies that value temporarily, for the currently running instance of the shell interpreter. In order to see where you could potentially modify your PATH variable more permanently, you need to find the hidden configuration dotfiles in your home directory, that you would need to edit by adding this `export` command to make such a change every time your shell starts-up. The hidden dotfiles (or hidden dot-directories) have names that start with the literal dot character (`.`) and are only listed by the UNIX `ls` command when executed with the `-a` option (which stands for "all") -- which is why they are "hidden."
+
+Experiment with the following commands to explore as to how and where you could do this. After each UNIX command, record the output when the command is followed by sets of backticks `` ``` ``, or discuss with your team-mates and the Professor to understand the output and then describe the output when the command is followed by a right angle bracket `>`. 
+
+Note that in these examples, we are demonstrating some more powers of shell expansion. First, the tilde character (`~`) always expands to the absolute path of your home directory. Second, the **shell glob/wildcard** star (`*`) matches all suffixes, so the expression `~/.*` expands to a list of all hidden dotfiles or dot-directories inside your home directory. Lastly here I also demonstrate the UNIX command `grep` which is used here to print the names and matching lines of all hidden dotfiles that contain the word "PATH" inside your home directory.
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo $HOME
+```
+```
+/home/anbll
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo ~
+```
+```
+/home/anbll
+```
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+echo ~/.*
+```
+
+Explain what you see:
+
+> I am able to see all the paths to each available file in the home directory, even the hidden files.
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+ls -lrdta ~/.*
+```
+
+Explain what you see:
+
+> I can see the list of this paths to these files, but now it is in a list with the permissions to each file.
+
+```{bash, eval=FALSE}
+# To be entered in the UNIX shell
+grep PATH ~/.*
+```
+
+Review instructions above and explain what you see:
+
+> Now, I can see what each part os the home directory is a file or another directory.
+
+## Task 4: Understand the Global Environment AKA Workspace in R: Use Assignment to Create User-Defined Data Objects and Bind Names to Them 
+
+### Background
+
+The environment plays a central role in the function of the R interpreter. It defines the meaning of variables and functions names that can be evaluated to their values or definitions when evaluating R language expressions.
+
+### Instructions
+
+1. <span style="color:blue">Create a new project directory and use it to start an instance of the R interpreter with an empty workspace.</span>
+
+
+```{bash, eval=FALSE}
+# A sequence of UNIX commands for the shell 
+# In the first command we create a Lab_3 directory under a directory QSB282
+# With the -p option, both directories are created if QSB282 
+# directory doesn't already exist. 
+# If you already made a directory for labs in this course
+# then you don't need the -p option.
+# If you named this course directory differently,
+# change the first command accordingly
+mkdir -p QSB282/Lab_3 
+cd QSB282/Lab_3
+R
+```
+
+2. <span style="color:blue">Assign values to some variables in R and see the effect on the environment.</span> Here we will use the `ls()` function in R to list the currently user-defined variables and functions in the current workspace, also called the "global environment" and named `.GlobalEnv` or `R_GlobalEnv`. Then we'll use the R assignment operator `<-` or `->` to create some variables and functions in R, and see how these assignments modify the global environment.
+
+Record the output to the following R command below the code chunk by typing or copying the R command into the working R interpreter prompt:
+
+```{r, eval=FALSE}
+# an R functional expression for the R interpreter
+ls()
+```
+```
+[1] "check"           "checkdata"       "params"          "print_and_check" "q"              
+```
+
+Then, copy-paste these assignment expressions into the R interpreter:
+
+```{r, eval=FALSE}
+# Successive R expressions for the R interpreter
+s <- 4 + 4
+s
+seq <- seq(1,10)
+seq
+sumseq <- sum(seq)
+sumseq
+ls()
+sumseq + s -> newsum
+newsum
+```
+
+```
+> s
+[1] 8
+
+> seq
+ [1]  1  2  3  4  5  6  7  8  9 10
+
+> semseq
+[1] 55
+
+> ls()
+[1] "check"           "checkdata"       "params"          "print_and_check" "q"               "s"              
+[7] "seq"             "sumseq"         
+
+> newsum
+[1] 63
+```
+
+Now record the output to the following R command below the code chunk by typing or copying the R command into the working R interpreter prompt and copying the output into the sets of backticks below:
+
+```{r, eval=FALSE}
+ls()
+```
+```
+[1] "check"           "checkdata"       "newsum"          "params"          "print_and_check" "q"              
+[7] "s"               "seq"             "sumseq" 
+```
+
+You should see that the `ls()` function now lists the names of these objects in R active memory that have been created and named by the assignment expressions you entered.
+
+3. <span style="color:blue">Save and restore a workspace.</span> Here you'll explore what happens to the global environment between sessions with the R interpreter within the same project directory. First, quit the R interpreter: 
+
+```{r, eval=FALSE}
+q()
+```
+
+when you get the question prompt `Save workspace image? [y/n/c]:` answer `y` for "yes".
+
+In the UNIX shell, show the hidden dotfiles in the present working directory with `ls -lrta`. The workspace is contained in the newly created file `.RData`. You can try to view it with `less` and you will see this is a binary-file containing **compiled byte-code** for the variables in the global environment. Now restart R with `R` at the UNIX prompt, and evaluate the R function `ls()`. Do you see the workspace restored? Write the return value of this R expression here:
+
+```
+[1] "check"           "checkdata"       "newsum"          "params"          "print_and_check" "q"              
+[7] "s"               "seq"             "sumseq"
+```
+
+## Task 5: Inspect and Modify the Global Environment of the Session R Interpreter in RStudio 
+
+### Background
+
+Everytime RStudio starts, it launches an instance of the R interpreter, which is independently installed on your system. This instance behaves identically to the one you have been interacting with inside the UNIX shell. You can interact with this R interpreter through the **Console** tab of the **Console pane** at the lower-left of the RStudio window. Here we'll show that RStudio provides a pane to easily view the environment. 
+
+### Instructions
+
+1. Change directory to your home directory
+1. Launch RStudio either using `rig` or your systems application launcher.
+1. In the upper-right pane of RStudio, you will find an `Environment` tab. Click on it. You may find some variables already defined there. 
+1. Clear the Workspace by clicking on `Session -> Clear Workspace...` or press the little "broom" button in the Environment pane. A dialogue box will pop-up asking if you are sure you want to clear the workspace (assuming there is nothing important there, confirm "yes" --- otherwise ask the Professor for help).
+1. Copy-paste the following R expressions into the Console
+```{r, eval=FALSE}
+# Successive R expressions for the RStudio Console
+s <- 4 + 4
+s
+seq <- seq(1,10)
+seq
+sumseq <- sum(seq)
+sumseq
+ls()
+sumseq + s -> newsum
+newsum
+```
+
+6. Notice the R object names and values that now appear in the RStudio Environment pane.
+
+## Task 6: Install and Load Packages in R and See How They Modify (or not) the Environment Search-Path
+
+### Background 
+
+The global environment is just the bottom of a hierarchy of environments that the R interpreter uses to search for the meanings of names that it encounters (or to tab-complete partial prefixes entered at the Console prompt). The R interpreter and RStudio initialize with various core standard packages that define built-in data objects like `Nile` and built-in functions like `seq()`, `sum()` and `help()`. To see these environments and their nesting order, use the R command `seqrch()`. The output is called R's **search path.**
+
+To add functionality to R, you need to install packages that define new data objects and function names to your system. You do this using R's package manager function called `install.packages()`. To then use that package of objects and functions, you need to load the library and attach the names into the search-path using the `library()` function. 
+
+In this exercise we will install and load the famous [Palmer Penguins](https://allisonhorst.github.io/palmerpenguins/) data, which gives sampled population data from three species of penguins in Antarctica, a popular data-set frequently used to demonstrate the data science facilities of R. We will see the effects or non-effects of installing and loading the library on the R search path.
+
+### Instructions
+
+1. <span style="color:blue">Print the initial R search path</span>. Enter this expression in the RStudio Console. Enter the return value in between the triple back-ticks:
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+search()
+```
+```
+[1] ".GlobalEnv"        "tools:rstudio"     "package:stats"     "package:graphics"  "package:grDevices"
+ [6] "package:utils"     "package:datasets"  "package:methods"   "Autoloads"         "package:base"
+```
+2. <span style="color:blue">Evaluate a name not in the search path.</span>. Enter this expression in the RStudio Console. Enter the return value in between the triple back-ticks. This demonstrates the error when a name is not found in the search-path.
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+penguins
+```
+```
+Erro: objeto 'penguins' não encontrado
+
+#In English: Error: object 'penguins' not found
+```
+
+3. <span style="color:blue">Install a package and note the effect on the search-path</span>. Enter these expressions in the RStudio Console. 
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+install.packages("palmerpenguins")
+```
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+search()
+```
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+penguins
+```
+
+Discuss with your team-mates: did the search-path change after you installed the `palmerpenguins` library? Did installing it cause the `penguins` name to be bound to a data object? Write your answer on one line after the following right angle bracket ('>')
+
+> It did not changed, and I also noticed that 'penguins' was not bound to the data.
+
+4. <span style="color:blue">Load a package into memory and attach it to the search path</span>. Enter these expressions in the RStudio Console. 
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+library(palmerpenguins)
+```
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+search()
+```
+
+```{r, eval=FALSE}
+# To be entered in the RStudio console
+penguins
+```
+
+Discuss with your team-mates: did the search-path change after you loaded the `palmerpenguins` library? Did loading the package cause the `penguins` name to be bound to a data object? Write your answer on one line after the following right angle bracket ('>')
+
+> Yes, and the name 'penguins' was bound to the data object.
+
+After loading the `palmerpenguins` package, do you see the `penguins` data-frame listed in the Global Environment pane of RStudio? Answer "yes" or "no".
+
+> no.
+
+In the Environment pane of RStudio, there is a pull-down menu that should read "Global Environment". If you click on it you should see the R search-path hierarchy of environments. Right after Global Environment should be an environment called `package palmerpenguins`. Click on it. Do you now see the `penguins` data-frame listed (Answer "yes" or "no")?
+
+> yes.
+
+Click on the `penguins` data-frame in the Environment pane. A table should pop-up in the RMarkdown pane showing this data-frame. You can search and sort this table. To see how to pull up a table like this from the Console, look at the Console, and you should see that clicking on the `penguins` data-frame in the Environment caused the expression `View(penguins)`to be entered in the Console. This shows that RStudio actions can be impolemented as evaluated R expressions in the Console, and that the `View()` function can cause any data-frame to be rendered in this way.  
+
+## Task 7: Define Functions in R, and See How Variable Names are Resolved with Lexical Scoping
+
+### Background 
+
+Users and package authors define functions in R using R's built-in `function()  function in R. After users define functions in R or the RStudio Console, the functions Functions are attached into the global environment. 
+
+Functions can accept defined **input parameters** that allow you to pass data to them. Although these input parameters have names, these names have meaning only while the function is being called and evaluated; they are not inserted into the global environment. We say that these **input parameters** are **local variables**, meaning they persist only for the lifetime of the execution of the body of the function ("local" here is meant to be the opposite of "global" as in "global environment" --- the variables are "local" to the function that defines them). Assignment statements within the body of a function also create local variables that are only defined during the evaluation of the function body. The way that the R interpreter implements this internally is by creating an top-level environment at the beginning of the search-path associated to any function while it is executing.
+
+However, if a name of a variable or function is encountered inside a function body that is not already defined inside that function's environment, the R interpreter will search the entire search path, including the global environment and environments associated to built-in and loaded libraries, in order to find a variable or function object bound to that name. This collection of rules and behavior is called **lexical scoping.**
+
+### Instructions
+
+1. <span style="color:blue">Define and use a function in R and demonstrate lexical scoping of variables.</span> Enter these expressions in the RStudio Console. Enter the return value in between the triple back-ticks:
+
+```{r, eval=FALSE}
+## Enter the following code in the RStudio Console
+x <- 1000
+f <- function(x){
+  return(x + 10);  
+}
+f(2)
+```
+```
+[1] 12
+```
+
+Now look at the Environment pane in RStudio. Do you see the variable `x` and function `f` defined there? Discuss with your team-mates why the return value is 12 instead of 1010, and write your answer in one-line after the right-angle bracket here:
+
+> I think that the result is 12 instead of 1010 because the f(2) substitutes the x per 2, and not 1000.
+
+2. <span style="color:blue">See how assignments within function bodies create local variables,</span> Enter these expressions in the RStudio Console. Enter the return value in between the triple back-ticks:
+
+```{r, eval=FALSE}
+## Enter the following code in the RStudio Console
+x <- 1000
+a <- pi
+f <- function(x){
+  a <- 4
+  return(a+x)
+}
+f(2)
+```
+```
+[1] 6
+```
+
+Discuss with your team-mates why the return value is 6 instead of 5.141593 (2 + pi), and write your answer in one-line after the right-angle bracket here:
+
+> It is 6 because the variable a, which is inside the function, is equal to 4.
+
+3. <span style="color:blue">See how function bodies can dereference global variables when they are not masked by local variables.</span> Enter these expressions in the RStudio Console. Enter the return value in between the triple back-ticks:
+
+```{r, eval=FALSE}
+## Enter the following code in the RStudio Console
+x <- 1000
+a <- pi
+f <- function(x){
+  return(a+x)
+}
+f(2)
+```
+```
+[1] 5.141593
+```
+
+What is the difference between the last two definitions of the function `f`? Discuss with your team-mates why the return value is now 5.141593 instead of 6, and write your answer in one-line after the right-angle bracket here:
+
+> Now it is [1] 5.141593 because the variable 'a' is set to pi, and it is outside the function.
+
+Congratulations! You are now done with Lab 3. 
+
+## Your Feedback and/or Questions about this Lab
+
+ <span style="color:blue">Do you have any feedback or questions after completing this assignment? Please write those here.</span>
+
+I am *really* enjoying these labs, although I think that this last one was too long.
