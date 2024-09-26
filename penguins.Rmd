@@ -1,0 +1,157 @@
+---
+title: "Penguins"
+author: "Anabelle Marques Klovrza"
+date: "2024-09-25"
+output: 
+html_document:
+    highlight: tango
+    number_sections: no
+    theme: cosmo
+    toc: yes
+    toc_float:
+      collapsed: true
+urlcolor: blue
+linkcolor: purple
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+header-includes: \linespread{1.05}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=F,
+                      fig.path = 'figs/',
+                      cache.path='cache/',
+                      warning=F,
+                      message=F)
+
+knitr::opts_chunk$set(
+                  fig.process = function(x) {
+                      x2 = sub('-\\d+([.][a-z]+)$', '\\1', x)
+                      if (file.rename(x, x2)) x2 else x
+                      }
+                  )
+```
+
+# Discussion 5 - Making a pipeline in group
+We will do the `penguins`. First, we filtered the data from `penguins_raw` and grouped it by `Island`and `Species`:
+```{r}
+library(tidyverse)
+library(palmerpenguins)
+
+penguins_by_island_species <- penguins_raw |> 
+    drop_na() |>
+    select(!Comments) |>
+  group_by(Island, Species) |>
+    arrange(desc(`Body Mass (g)`))
+```
+
+Now, we want to see specific islands:
+```{r}
+biscoe <- penguins_by_island_species |>
+  filter(Island == "Biscoe")
+
+view(biscoe)
+
+torgersen <- penguins_by_island_species |>
+  filter(Island == "Torgersen")
+
+view(torgersen)
+
+dream <- penguins_by_island_species |>
+  filter(Island == "Dream")
+
+view(dream)
+```
+
+# PCA of Antarctic penguins 
+Packages to create the PCA:
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+library(purrr)
+library(factoextra)
+library(plyr)
+library(dplyr)
+library(vegan)
+library(ggpubr)
+library(RColorBrewer)
+library(scales)
+library(car)
+library(devtools)
+library(ggbiplot)
+library(ggfortify)
+library(pairwiseAdonis)
+```
+
+According to the variables `Culmen Length (mm)`, `Culmen Depth (mm)`, `Body Mass (g)`, and `Flipper Length (mm)`. We can see that there are two main clusters: a Gentoo cluster, and a Adelie-Chinstrap cluster!
+```{r PCA}
+pcapenguins <- prcomp(penguins_by_island_species[, c("Body Mass (g)", "Culmen Length (mm)", "Culmen Depth (mm)", "Flipper Length (mm)" )], 
+                     center = TRUE, 
+                     scale. = TRUE)
+pcapenguins
+
+summary(pcapenguins)
+
+# Variance 
+variance_pca = (pcapenguins$sdev)^2
+
+variance_pca
+
+# extract autovalues - proportion of variance on the PCs
+eig.val <- get_eigenvalue(pcapenguins)
+eig.val
+
+# Variables
+res.var <- get_pca_var(pcapenguins)
+res.var$coord
+
+## contribution for the PCs - each variable contributes in percentage
+res.var$contrib
+res.var$cos2 # representation quality
+
+# correlation plot
+library(corrplot)
+corrplot(res.var$cos2, is.corr=FALSE)
+
+# variance proportions for each variable
+fviz_eig(pcapenguins, addlabels = T)
+
+# data frame with the PCA results
+pca_data <- as.data.frame(pcapenguins$x)
+pca_data$Species <- penguins_by_island_species$Species
+pca_data$Island <- penguins_by_island_species$Island
+
+# colors for each group
+colorspenguins <- c("Adelie Penguin (Pygoscelis adeliae)" = "darkolivegreen2", "Gentoo penguin (Pygoscelis papua)" = "skyblue1", "Chinstrap penguin (Pygoscelis antarctica)" = "firebrick1")
+
+# graph
+penguinsPCA <- ggplot(pca_data, aes(x = PC1, y = PC2), color = Species) +
+  geom_point(aes(shape = Island, fill = Species)) +
+  stat_ellipse(aes(color = Species), alpha = 1, size = 0.75, level = 0.90) + # add ellipse
+  labs(title = "PCA of Antarctic penguins", subtitle = "For body mass, culmen length and depth, and flipper length", x = "PC1 (55.2%)", y = "PC2 (26.82%)") +
+  theme_minimal() +
+  theme(axis.title = element_text(color = "black"),
+        axis.text = element_text(color = "black"),
+        axis.line = element_line(color = "black")) +
+  scale_color_manual(values = colorspenguins)
+
+print(penguinsPCA)
+  
+# adding variables
+loadings <- as.data.frame(pcapenguins$rotation) * sqrt(pcapenguins$sdev)
+
+# adding text and arrows for the variables
+penguin <- penguinsPCA + geom_segment(data = data.frame(xend = loadings[, 1], yend = loadings[, 2]),
+                      aes(x = 0, y = 0, xend = xend, yend = yend), 
+                      color = 'black', arrow = arrow(length = unit(0.09, "inches")), 
+                      size = 1) +
+          geom_text(data = data.frame(x = loadings[, 1], y = loadings[, 2], label = rownames(loadings)),
+                    aes(x = x, y = y, label = label), 
+                    color = 'black', size = 3.5, vjust = -1)
+
+print(penguin)
+```
