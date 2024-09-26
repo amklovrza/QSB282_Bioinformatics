@@ -1,0 +1,190 @@
+---
+title: "QSB 282 Fall 2024 Lab #2" 
+subtitle: "Introduction to Command-Line Interfaces (CLIs): UNIX Terminal and R Interpreter"
+author: "Anabelle Marques Klovrza"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    number_sections: yes
+    toc: yes
+  word_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+params:
+  class: "QSB 282"
+  classweb: https://catcourses.ucmerced.edu/courses/32589
+  semester: "Fall Semester of 2024"
+  assignment: "Lab #2"
+  purpose: "to understand essential and common principles of working with CLI interpreters including the UNIX shell and the runtime R interpreter."
+  deadline: "12:00 PM (or before Discussion) on Wednesday, Sep 4th, 2024"
+  date: !r Sys.Date()
+  version: 1
+  rmarkdown_url: ""
+  bib_url: ""
+  datafiles: ""
+  ids: !r c("jcalderon27","agallardo10","cng368","csotero","bimstepf","shour","jtello5","nkhurram","bmotomochicedillo","lbajwa","zfayaziboroujeni","shussin","eneff","kestrella6","jlucero25","mmajumdar","aklovrza","aminahdawood","nsafaeihashkavaei","fgorrostietacampos","pcuriel","jdo61","lbreithaupt")  
+  computers: !r c("Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Mac","Mac","Mac","Windows/Linux","Windows/Linux","Mac","Windows/Linux","Mac","Windows/Linux","Windows/Linux","Windows/Linux","Mac","Mac")
+  s1c1: ce234bbdc72441566df759f34a69cc3f
+date: "`r params$date`"
+urlcolor: blue
+linkcolor: red
+---
+
+```{r setup, include=FALSE, cache=F, message=F, warning=F, results="hide"}
+##  PLAY THIS CODE CHUNK IN ORDER TO BE ABLE TO CHECK ANSWERS BY PLAYING CODE CHUNKS
+knitr::opts_chunk$set(echo=TRUE,cache=FALSE,warning=FALSE, message=FALSE, collapse=TRUE)
+q <- 1 ## initialize question counter
+checkdata <- c(params$s1c1)
+check <- function(answer,q){
+  check <- ifelse(digest::digest(answer) == checkdata[q], ## TEST
+                  "CORRECT", ## TRUE
+                  "INCORRECT") ## FALSE
+  print(check)
+}
+```
+
+# Preface
+
+## Purpose of this Problem Set Assignment
+
+The purpose of this Problem Set is `r params$purpose`
+
+## Instructions to Complete This Problem Set Assignment
+
+1.  Download the `.Rmd` file for this lab from Files under `r params$classweb`.
+2.  Open your copy of the file in RStudio and edit the `author:` field in the YAML header (at the top of the RMarkdown file) so that it contains your name.
+3.  Knit the file to see your assignment.
+4.  Read through this file in RStudio and edit the RMarkdown as instructed. 
+5.  After completing all steps assignment, turn in the knitted output HTML file to Canvas.
+
+## Due Date and Grading
+
+`r params$assignment` is **due today at the end of lab, or latest at the beginning of discussion.**
+
+# Assignment
+
+## Task 1: Find your Team
+
+### Background
+
+This semester, during labs and discussion, we'll be working in teams. Teams will be different in Lab and Discussion. Lab teams will be organized by the type of personal computer you are using and will persist through the course. Discussion teams will be randomized differently across the entire class each time.
+
+In this task, you'll modify some R code to find out who is on your lab team. 
+
+Another point of this exercise is to show that reproducible computing often requires setting (and documenting) what is called a **random seed** before computing anything involving random numbers or random sampling. 
+
+Most Random Number Generators (RNGs) are only **pseudo-random:** deterministic algorithms that always produce the same sequence of numbers when started from the same random seed. What makes the algorithms RNGs is that the sequence of numbers is unpredictable from one output number to the next.
+
+This first task demonstrates that in order for everyone in the class to compute the same lab teams **everyone needs to set the same seed before computing the teams.** In this way, the seed behaves like a password or special key that must be communicated in order to reproduce the same result. 
+
+Like a password, when you use RNGs in your scientific computing, you need to explicitly document the random seed used in order for readers, coauthors to reproduce the same result.
+
+### Instructions 
+
+1. Knit this notebook in order to execute the following **code-chunk** and print out a team number for everyone in the class.
+
+```{r}
+set.seed(282)
+lab <- data.frame(ids = params$ids,
+                  computers = params$computers)
+macusers <- lab[lab$computers=="Mac",]
+winusers <- lab[lab$computers=="Windows/Linux",]
+winusers$team <- sample(c(rep("Team 1",6),rep("Team 2",5)),11,replace=FALSE)
+macusers$team <- sample(c(rep("Team 3",6),rep("Team 4",6)),12,replace=FALSE)
+winusers
+macusers
+answer <- c(macusers$team,winusers$team)
+check(answer,1)
+```
+2. Notice that the bottom of the output reads `## [1] "INCORRECT"`. **Notebooks in this class can check the correctness of your answers when you knit them.** This is what it looks like when your answer is incorrect. 
+
+3. Compare the knitted output of team assignments against that of your neighbors. The team assignments will likely be different in everybody's notebooks.
+
+3. In order for everybody to compute the same teams, change your copy of this Rmarkdown notebook by adding the line `set.seed(282)` on a new line all by itself at the top of the code chunk, after line number 89 (that starts `` ```{r} ``) and before the line that reads `lab <- data.frame(ids = params$ids,`.
+
+4. Now knit the notebook again. Everyone should have the same output and lab teams as everyone else, and the bottom of the code chunk should now read `[1] "CORRECT"`.
+
+5. Now, go find your lab teammates and sit by them, working together to complete the rest of this lab.
+
+## Task 2: Name your Team
+
+Decide with your team a cool and/or funny name for your team. Don't worry, you can change it later if you like. Record your team-name here by putting it in the blank line between the two lines of triple back-ticks `` ``` ``:
+
+```
+Triangle_piRates
+
+```
+
+## Task 3: Explore using UNIX Filesystem, Working Directories and History Using R in UNIX
+
+### Background 
+
+<span style="color:blue">About interpreters:</span> When you use a UNIX shell like `bash` or `zsh` in the Terminal, or run R in the UNIX shell or RStudio Console, you are using a Command-Line Interface (CLI) to interact with a general computing agent called an **interpreter**.  One way to think of interpreters is as Artificial Intelligent (AI) agents that understand a specific language of commands or functions, which operate or evaluate those commands or functions as input, one command or function line at a time, possibly returning output or other **side effects,** and when finished, prompting for the next line of input with what is called a **prompt**. Like AI agents that you may be used to using, within a given run-time session and sometimes even across consecutive run-time sessions, interpreters are able to remember data and commands based on your history of usage.
+
+<span style="color:blue">About filesystems:</span> All personal computers use a hierarchical **filesystem** that persistently stores data even when the PCs are powered down. By hierarchical, I mean that the filesystem may be represented as a **tree** of nested folders called **directories** with a **root directory** that contains all other files and directories on the filesystem. In UNIX, the root directory is named with the forward slash `/`. Your own personal files are stored under your **home directory** which lives somewhere under the root directory, often inside a directory called `/home` or `/Users`. Executable programs and scripts that you can run through commands also live in your filesystem, often outside your home directory.
+
+<span style="color:blue">UNIX Commands run in a working directory:</span> When you use applications in Mac or Windows, you open and save files anywhere on your computer. It almost seems like these applications run like a UFO floating somewhere undefined "over" your filesystem. In contrast, its best to think of the UNIX and R interpreters as if they are working *inside your filesystem in a specific place,* like Alice somewhere down the rabbit hole. This specific place where your commands run is called a *working directory.* Running UNIX commands and R sessions in different working directories allows you to keep the results of your work for different projects organized and isolated from one another. 
+
+In the rest of this lab, we will specifically learn to run R within the UNIX shell and exercise these fundamental concepts and principles, and alspo learn some basic commands in UNIX and functions in R. We will learn that the UNIX shell and R interpreter in their basic usage, share  design principles and vocabulary in common.
+
+<span style="color:blue">In order to successfully complete this lab, Windows/Linux users will want to install rig and R under WSL2 or on their Linux side, rather than use R/RStudio on their Windows side</span>.
+
+### Instructions
+
+1. <span style="color:blue">Find out your username.</span> Open a UNIX terminal and find out your username by issuing the command `whoami`. After typing this command and pressing `return` the output appears below the prompt. Copy-paste the output on a new line between the triple back-tick lines `` ``` ``:
+```
+anbll
+```
+2. <span style="color:blue">Change directory to your home directory and check what is your present working directory.</span> Back in the terminal, go to your home directory by typing the command `cd`. After typing this command and pressing `return`, no output should appear. In order to see what is your present working directory, now issue the command `pwd`. The output appears below the prompt giving what is called the **absolute path** to your home directory, which is also the present working directory at this moment. Copy-paste this output on a new line between the triple back-tick lines `` ``` ``:
+```
+/home/anbll
+```
+3. <span style="color:blue">Make a new project subdirectory under your home directory, list the contents of the home directory, and change directory into the new subdirectory.</span> Back in the terminal, make a new project directory by typing the command `mkdir Lab_2` (In UNIX, because commands use spaces as special characters, we avoid using spaces in file and directory names). You can then see that the new directory was created by listing the contents of the present working directory with most recent files and directories at the bottom of the output by issuing the command `ls -lrt`. You should see the new directory that you made at the bottom of the output. Compare the output when you issue just the command `ls`. When you run `ls -lrt` you are using a shorthand to run the command `ls` with the option `-l` for "long listing", `-t` for sorting by time of creation or modification, and `-r` to reverse sort order. The options `-lrt` modify the behavior of the command `ls`. Try running `ls -l -r -t`: the results will be the same as when you run `ls -lrt`. Now change directory into the new directory you created by issuing the command `cd Lab_2`. Now issue the command `pwd`. Copy-paste the output of `pwd` on a new line between the triple back-tick lines `` ``` ``:
+```
+/home/anbll/fall2024/qsb282/Lab_2
+```
+4. <span style="color:blue">Find the path to an executable script or program corresponding to a command.</span> when you issue a command in UNIX, the command name (like `pwd` or `cd`) is always the first word of the command-line separated by spaces. Your UNIX shell searches multiple places in your filesystem for a script or executable with this command name (this set of places is called the *command path* or just *PATH*). There is a UNIX command that tells you which place the command will be executed from, that is where in your filesystem the script or executable is running from. This command is `which`. For example, try issuing the command `which R` to find where the executable binary is for the R interpreter on your UNIX system. Copy-paste this output on a new line between the triple back-tick lines `` ``` ``:
+```
+/usr/local/bin/R
+```
+5. <span style="color:blue">Start R in the UNIX terminal, and get the R working directory.</span> Issue the UNIX command `R` in the UNIX terminal. An instance of an R interpreter will start up in the shell and the prompt will change to indicate this to look like `>`. You are now running R <span style="color:blue">inside the working directory where you issued the R command</span>. To see this, evaluate the R function `getwd()`. Notice that the parentheses are required: see what happens when you forget to add the empty function argument parentheses by next evaluating the name `getwd` without the parentheses. Now hit the `UP-arrow` key twice to recall your second-to-last R function line, `getwd()` and evaluate it again by hitting `return`. The output should be similar to but different than the output of running `pwd` in UNIX from step 3. Copy-paste the output on a new line between the triple back-tick lines `` ``` ``:
+```
+[1] "/home/anbll/fall2024/qsb282/Lab_2"
+```
+6. <span style="color:blue">Run an R command to see a built-in dataset and interpret it.</span>. Everytime after a UNIX command completes execution, the shell interpreter gives you back a new UNIX prompt indicating it is ready for you to enter the next command. Similarly, everytime after an R function executes you should get back the R prompt `>`. The R programming language comes with some famous statistical datasets built-in to it. To see one, have the R interpreter evaluate the expression `Nile`. Examine the output and discuss it with your team: how many years of data are shown? What do the numbers in square brackets (`[ ]`) represent? Write short answers to these two questions in the space between the triple backticks below.
+
+```
+The data shows 99 years. Each number in [] represent the first number in the sequence. So, if you want the number 42 in the sequence, you can find it easily.
+```
+
+7. <span style="color:blue">Run R commands to check documentation on R objects and functions, and attempt to make a graph.</span> At the next R prompt, to see more information about the `Nile` data, evaluate the function `help(Nile)`. To page down this documentation hit the `space bar`, and to quit paging and return to the R prompt, type `q`. Now make a histogram of the Nile data by evaluating the function `hist(Nile)`. To get more information on the `hist()` function, evaluate the function `help(hist)`. Look at the section of the help documentation for the `hist()` R function called `Usage:`. Discuss with your teammates: in the two usage examples, what do you think the symbol `x` means? What does the ellipsis (`...`) mean? In the second usage example, why does only the first argument `x` not followed by an equal sign (`=`) and some more code? Write short answers to these questions in the space between the triple backticks below.
+
+```
+The symbol 'x' is a vector of values for which the histogram is desired. The '(...)' represents further arguments and graphical parameters passed to ‘plot.histogram’. The additional parameters in the second usage example represents specific parameters in which the author wants to specify.
+```
+
+8. <span style="color:blue">Recall the history of R expressions that you ran and re-run them.</span>. When we programmers use CLIs, we like to economize on our typing and we like to avoid errors by reusing our code. In order to recall the expressions that your R interpreter evaluated in the current working directory, keep pressing the `UP-arrow` key to work backwards through your *history* until you recall the R expression `Nile`. Rerun this command again by pressing `return`.
+
+9. <span style="color:blue">Quit R, recall old UNIX commands in the shell history and edit and re-run a modified UNIX command.</span>. Quit R by evaluating the R function `q()`. R will ask: `Save workspace image? [y/n/c]:` -- answer "yes" by pressing `y`. You should return to the UNIX shell. Similar to the R prompt, you can recall successively older UNIX commands in your shell history by repeated pressing of the `UP-arrow` key. Continue iterating back in your UNIX command history until you recall the command `ls -lrt`. Edit the command by adding an `a` to the option string, so now it reads `ls -lrta`. You should now see at the bottom of the output a file with a dot at its beginning listed there in the present working directory called `.Rhistory`. To see the contents of this "hidden" dotfile (which requires the `-a` option to view it in a file listing), try issuing the UNIX command `less .Rhistory`. Hit `q` to quit the UNIX pager to view text-files called `less`. You can also print the contents of a textfile to screen by issuing the UNIX command `cat .Rhistory`. This file called `.Rhistory` is how your work with the R interpreter is saved in a given working directory. 
+
+10. <span style="color:blue">Get documentation on UNIX commands.</span>. Like R, UNIX comes with documentation built-in to it. Most UNIX commands come with "manual pages" called "man pages" for short. To access them, use the UNIX command `man`. For example, to see the manual page for the `mkdir` command, issue the UNIX command `man mkdir`. Page through the man page using `space bar` and hit `q` to quit and return to the UNIX prompt. 
+
+11. <span style="color:blue">Run the R interpreter in a different directory</span>. Change back to your home directory with the UNIX command `cd`. Create a new directory under your home directory by issuing the command `mkdir tmp` and then change into that directory with the command `cd tmp`. Start the R interpreter by issuing the command `R`. Verify that you are using a different working directory in R by evaluating the function `getwd();` check that the output is different from the one that you got in step 5 above. Write the output in the space between the triple backticks below.
+
+```
+[1] "/home/anbll/tmp"
+
+```
+
+12. <span style="color:blue">See more datasets built-in to R.</span>. Now to see different datasets built-in to R, evaluate the R function `data()`. You can page through the datasets with `space-bar` and quit back to the R prompt with `q`. Then look at the `Titanic` dataset by evaluating the R expression `Titanic`. Quit R by evaluating the R function `q()` and save the workspace image. 
+
+13. <span style="color:blue">Verify the R interpreter has different histories in different working directories.</span>. Change back to your home directory with the UNIX command `cd`. Compare the two different sessions of R that you ran by comparing the output of the commands `cat Lab_2/.Rhistory` and `cat tmp/.Rhistory`
+
+14. <span style="color:blue">Resume a session with the R interpreter inside a working directory.</span>. Change back to the Lab 2 directory with the UNIX command `cd Lab_2`. Restart the R interpreter with the UNIX command `R` scroll through your history of R expressions in this working directory with the `UP arrow` and 'DOWN arrow' keys. Try running an old expression. Now see a listing of the full history within R by evaluating the R function `history()`. Then you can quit R with `q()` and save the workspace history.
+
+Congratulations! You are now done with Lab 2. Knit your output and upload it to CatCourses.
