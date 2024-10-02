@@ -1,25 +1,20 @@
 ---
 title: "Lab 6: Quarto presentation"
 author: "Anabelle Marques Klovrza"
+bibliography: references.bib
 format: revealjs
 editor: visual
 ---
 
-## Quarto
+## Some important literature
 
-Quarto enables you to weave together content and executable code into a finished presentation. To learn more about Quarto presentations see <https://quarto.org/docs/presentations/>.
+-   This reference brings important information about island-like environments and how we should look at them to estimate the diversity of marine lakes[@dawson_island_2016]
 
-## Bullets
+-   The reference [@hodapp_climate_2023] brings a background for the problems that the marine realm is facing, due to climate change. It will be a good start for my introduction!
 
-When you click the **Render** button a document will be generated that includes:
+-   Last, but not least, [@hackett_multi-habitat_2024] shows how multi-habitat landscapes can be more stable, and consequently less vulnerable to change.
 
--   Content authored with markdown
--   Output from executable code
+## A cool equation of two
+$$w_A(g) \equiv \prod_i^M \sum_j^M \Big( \frac{\exp(-q\epsilon d^H_{i,j})}{\sum_j \exp(-q\epsilon d^H_{i,j})} \Big) \phi^{d^A_{i,j}}$$
 
-## Code
-
-When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
-
-```{r}
-1 + 1
-```
+## References
